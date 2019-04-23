@@ -1,30 +1,38 @@
 #filter Helper
 
-import requests
 import pandas as pd
 from selenium import webdriver
-from PIL import Image
-from io import BytesIO
 
 
-def filter_catalogue(catalogue_local_path):
-
-    catalogue = pd.read_json(catalogue_local_path, orient = 'records')
-    print(catalogue)
+def filter_catalogue(catalogue_local_path, output_path, chrome_url):
     
-    for i in range(0, len(catalogue)+1):
-        response = requests.get(catalogue[i]['defaultImages'][0])
-        img = Image.open(BytesIO(response.content))
-        img.show()
-        print(catalogue[i]['title'])
+    catalogue = pd.read_csv(catalogue_local_path)
+    browser = webdriver.Chrome(chrome_url)
 
-        confirm = input("Do you want to keep this? (y/n)")
-        if confirm == 'n':
-            catalogue.drop(catalogue[i])
-            catalogue.to_json(catalogue_local_path, orient ='table')
-    return
+    for index, item in catalogue.iterrows():
 
-filter_catalogue(r'C:\Users\Arno Murcia\Desktop\Northwestern University\GitHub\NUVention-B-2019\RTRDressesClean.json')
+        item_url = item["defaultImages"].replace("[", "")
+        item_url = item_url.replace("]", "")
+        item_url = item_url.replace("'", "")
+        item_url = list(item_url.split(", "))[0]
+
+        browser.get(item_url)
+        confirm = input("Do you want to keep "+item['title']+ "? (y/n)")
+
+        if 'n' in confirm:
+            catalogue.drop([index], inplace = True)
+        elif confirm == '' or confirm == ' ':
+            confirm = input("Do you want to keep "+item['title']+ "? (y/n)")
+        else:
+            new_city = input("City (LA, NYC): ")
+            new_activity = input("Activity (Dining, PP): ")
+            catalogue.loc[index, "City"] = new_city
+            catalogue.loc[index, "Activity"] = new_activity
+            
+        catalogue.to_csv(output_path, index = None, header=True)
+
+
+#filter_catalogue(r'C:\Users\Arno Murcia\Desktop\Northwestern University\GitHub\NUVention-B-2019\RTRitems large.csv', 'C:/Users/Arno Murcia/Documents/chromedriver_win32/chromedriver.exe')
         
         
-    
+#output_path = r'C:\Users\Arno Murcia\Desktop\Northwestern University\GitHub\NUVention-B-2019\All Wearever Items Compiled.csv'    
